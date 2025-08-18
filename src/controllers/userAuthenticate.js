@@ -1,4 +1,5 @@
 
+const redisClient = require('../config/redis')
 const User = require('../models/user') 
 const validateUser = require('../utils/validatorUser')
 const bcrypt = require('bcrypt')
@@ -6,36 +7,29 @@ const jwt = require('jsonwebtoken')
 
 const register = async  (req, res) => {
     try{
-        // 1. Validate the Data
         validateUser(req.body);
 
         // 2. Check if Email Id exist already or not.
 
-
         const {firstName, emailId, password} = req.body;
-        // 3. Hashing password
         req.body.password = await bcrypt.hash(password, 10);
-        
-        // 4. User Creation
+
+        // Fixed that whoever comes here we make him 'user'
+        req.body.role = 'user';
         const user = await User.create(req.body);
 
-        // 5. JWT Token
         const token = jwt.sign(
-            { _id: user._id, emailId: emailId },   // payload
+            { _id: user._id, emailId: emailId, role: 'user' },   // payload
             process.env.JWT_SECRET,                // secret key (stored in .env file)
             { expiresIn: 60 * 60 }                 // 1 hour expiry (3600 seconds)
         );
 
-        // 6. Set and send Cookie to User
         res.cookie("token", token, {
             maxAge: 60 * 60 * 1000,
             httpOnly: true,   // frontend JS can’t access it (helps prevent XSS)
         });
 
-        // 7. Send Final Response
         res.status(201).send("User Registered Successfully");
-        
-         
     }
     catch(err){
         res.status(400).send("Error: " + err);
@@ -63,7 +57,7 @@ const login = async (req, res) => {
 
         // 6. Create JWT Token
         const token = jwt.sign(
-            { _id: user._id, emailId: emailId },   // payload
+            { _id: user._id, emailId: emailId, role: user.role },   // payload
             process.env.JWT_SECRET,                // secret key (stored in .env file)
             { expiresIn: 60 * 60 }                 // 1 hour expiry (3600 seconds)
         );
@@ -84,13 +78,56 @@ const login = async (req, res) => {
 
 const logout = async (req, res) => {
     try{
-        
+        // 1. Validate the Token
+        // 2. Put token in Redis
+        // 3. Clear Cookies 
+
+        const {token} = req.cookies;
+        const payload = jwt.decode(token, process.env.JWT_SECRET);
+        await redisClient.set(`token:${token}`, 'Blocked');
+        await redisClient.expireAt(`token:${token}`, payload.exp);
+
+        res.cookie("token", null, {expires: new Date(Date.now())});
+        res.send("Logged out successfully");
     }
     catch(err){
-        res.status().send("Error :" + err)
+        res.status(503).send("Error: " + err);
+    }
+}
+
+const adminRegister = async(req, res) => {
+     try{
+        validateUser(req.body);
+
+        const {firstName, emailId, password} = req.body;
+        req.body.password = await bcrypt.hash(password, 10);
+
+        // Fixed that whoever comes here we make him 'Admin'
+        req.body.role = 'admin';
+
+        const user = await User.create(req.body);
+
+        const token = jwt.sign(
+            { _id: user._id, emailId: emailId, role: 'user' },   // payload
+            process.env.JWT_SECRET,                // secret key (stored in .env file)
+            { expiresIn: 60 * 60 }                 // 1 hour expiry (3600 seconds)
+        );
+
+        res.cookie("token", token, {
+            maxAge: 60 * 60 * 1000,
+            httpOnly: true,   // frontend JS can’t access it (helps prevent XSS)
+        });
+
+        res.status(201).send("User Registered Successfully");
+    }
+    catch(err){
+        res.status(400).send("Error: " + err);
     }
 }
 
 const myProfile = (req, res) => {
     
 }
+
+
+module.exports = {register, login, logout, adminRegister}; 
