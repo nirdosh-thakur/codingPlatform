@@ -7,28 +7,32 @@ const jwt = require('jsonwebtoken')
 
 const register = async  (req, res) => {
     try{
+        // 1. Validate user request
         validateUser(req.body);
 
         // 2. Check if Email Id exist already or not.
 
+        // 3. Fetch parameter from Request and Hash Password
         const {firstName, emailId, password} = req.body;
         req.body.password = await bcrypt.hash(password, 10);
 
-        // Fixed that whoever comes here we make him 'user'
-        req.body.role = 'user';
+        // 4. Create user in DB
         const user = await User.create(req.body);
 
+        // 5. Create token - Including user detail
         const token = jwt.sign(
             { _id: user._id, emailId: emailId, role: 'user' },   // payload
             process.env.JWT_SECRET,                // secret key (stored in .env file)
             { expiresIn: 60 * 60 }                 // 1 hour expiry (3600 seconds)
         );
 
+        // 6. Store token in Cookie
         res.cookie("token", token, {
             maxAge: 60 * 60 * 1000,
             httpOnly: true,   // frontend JS can’t access it (helps prevent XSS)
         });
 
+        // 7. Send status to User
         res.status(201).send("User Registered Successfully");
     }
     catch(err){
@@ -57,7 +61,7 @@ const login = async (req, res) => {
 
         // 6. Create JWT Token
         const token = jwt.sign(
-            { _id: user._id, emailId: emailId, role: user.role },   // payload
+            { _id: user._id, emailId: user.emailId, role: user.role },   // payload
             process.env.JWT_SECRET,                // secret key (stored in .env file)
             { expiresIn: 60 * 60 }                 // 1 hour expiry (3600 seconds)
         );
@@ -97,27 +101,32 @@ const logout = async (req, res) => {
 
 const adminRegister = async(req, res) => {
      try{
+        // 1. Validate user request
         validateUser(req.body);
 
+        // 2. Check if Email Id exist already or not.
+
+        // 3. Fetch parameter from Request and Hash Password
         const {firstName, emailId, password} = req.body;
         req.body.password = await bcrypt.hash(password, 10);
-
-        // Fixed that whoever comes here we make him 'Admin'
-        req.body.role = 'admin';
-
+        
+        // 4. Create user in DB
         const user = await User.create(req.body);
 
+        // 5. Create token - Including user detail
         const token = jwt.sign(
-            { _id: user._id, emailId: emailId, role: 'user' },   // payload
+            { _id: user._id, emailId: user.emailId, role: user.role },   // payload
             process.env.JWT_SECRET,                // secret key (stored in .env file)
             { expiresIn: 60 * 60 }                 // 1 hour expiry (3600 seconds)
         );
-
+        
+        // 6. Store token in Cookie
         res.cookie("token", token, {
             maxAge: 60 * 60 * 1000,
             httpOnly: true,   // frontend JS can’t access it (helps prevent XSS)
         });
 
+        // 7. Send status to User
         res.status(201).send("User Registered Successfully");
     }
     catch(err){
