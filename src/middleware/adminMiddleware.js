@@ -5,6 +5,7 @@ const redisClient = require('../config/redis')
 
 // From token we verify - whether valid token or not
 const adminMiddleware = async (req, res, next)  => {
+    console.log("admin Middleware")
     try{
         const {token} = req.cookies;
         if(!token) 
@@ -19,7 +20,7 @@ const adminMiddleware = async (req, res, next)  => {
         if (!_id) 
             throw new Error("Invalid token !");
 
-        const result = User.findById(_id); 
+        const result = await User.findById(_id); 
         if(!result) throw new Error("User dosen't exist.");
 
         // Check in Redis - if the token is blocked there or not
@@ -32,6 +33,7 @@ const adminMiddleware = async (req, res, next)  => {
 
     }
     catch(error){
+        console.log("Failed in admin MiddleWare");
         res.status(401 ).send("Error: "+ error);
     }
 }

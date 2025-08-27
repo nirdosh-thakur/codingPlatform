@@ -1,4 +1,4 @@
-const express = require('express')
+const express = require('express');
 const app = express();
 
 require('dotenv').config();
@@ -7,15 +7,15 @@ const cookieParser = require('cookie-parser');
 
 const authRouter = require('./routes/userAuth');
 const redisClient = require('./config/redis');
+const problemRouter = require('./routes/problem_routes');
+const submitRouter = require('./routes/submit');
 
 app.use(express.json());  // Convert Request Body JSON -> JavaScript Object
 app.use(cookieParser());  // Automatically parse the raw cookie string from headers.
 
 app.use('/user', authRouter);
-
-
-
-
+app.use('/problem', problemRouter);
+app.use('/submission', submitRouter);
 
 
 
