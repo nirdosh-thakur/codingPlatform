@@ -28,6 +28,7 @@ const adminMiddleware = async (req, res, next)  => {
         if (isBlockedByRedis) 
             throw new Error("Invalid token");
 
+        // Added to USer
         req.result = result;
         next();
 

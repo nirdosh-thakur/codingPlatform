@@ -20,5 +20,15 @@ const userSchema = new Schema({
     timestamps:true,
 })
 
+// Condition:findONeAndDelete
+// This will work when the condition will be there, then after user delteion from userSchema it will delte from submission too
+// Pre and Post two sitatution wher to delete
+userSchema.post('findOneAndDelete', async function(userInfo){
+    if(userInfo){
+        await mongoose.model('submission',deleteMany({userId: userInfo._id}))
+    }
+})
+
+
 const User = mongoose.model("user", userSchema);
 module.exports = User; 
